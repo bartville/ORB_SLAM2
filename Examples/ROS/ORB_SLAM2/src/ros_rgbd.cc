@@ -34,7 +34,12 @@
 
 #include"../../../include/System.h"
 
+#include "tf/transform_broadcaster.h"
+
 using namespace std;
+
+std::string tf_frame, tf_child_frame;
+Eigen::Matrix4f Camera_T(Eigen::Matrix4f::Identity());
 
 class ImageGrabber
 {
@@ -51,22 +56,35 @@ int main(int argc, char **argv)
     ros::init(argc, argv, "RGBD");
     ros::start();
 
-    if(argc != 3)
-    {
-        cerr << endl << "Usage: rosrun ORB_SLAM2 RGBD path_to_vocabulary path_to_settings" << endl;        
-        ros::shutdown();
-        return 1;
-    }    
+    cerr << endl << "Usage: rosrun ORB_SLAM2 RGBD [params] " << endl << endl;
+  
+    ros::NodeHandle nh("~");
 
-    // Create SLAM system. It initializes all system threads and gets ready to process frames.
-    ORB_SLAM2::System SLAM(argv[1],argv[2],ORB_SLAM2::System::RGBD,true);
 
+    std::string vocabulary, settings, rgb_topic, depth_topic;
+    bool use_gui;
+    nh.param("vocabulary", vocabulary, std::string(""));
+    nh.param("settings", settings, std::string(""));
+    nh.param("rgb_topic", rgb_topic, std::string("/camera/rgb/image_raw"));
+    nh.param("depth_topic", depth_topic, std::string("/camera/depth/image_raw"));
+    nh.param("tf_frame", tf_frame, std::string("/camera"));
+    nh.param("tf_child_frame", tf_child_frame, std::string("/base_link"));
+    nh.param("use_gui", use_gui, bool(false));
+    
+    std::cerr<<"_vocabulary:=       "<<vocabulary<<std::endl;
+    std::cerr<<"_settings:=         "<<settings<<std::endl;
+    std::cerr<<"_rgb_topic:=        "<<rgb_topic<<std::endl;
+    std::cerr<<"_depth_topic:=      "<<depth_topic<<std::endl;
+    std::cerr<<"_tf_frame:=         "<<tf_frame<<std::endl;
+    std::cerr<<"_tf_child_frame:=   "<<tf_child_frame<<std::endl;
+    std::cerr<<"_use_gui:=          "<<use_gui<<std::endl;
+
+    ORB_SLAM2::System SLAM(vocabulary, settings ,ORB_SLAM2::System::RGBD,use_gui);
     ImageGrabber igb(&SLAM);
-
-    ros::NodeHandle nh;
-
-    message_filters::Subscriber<sensor_msgs::Image> rgb_sub(nh, "/camera/rgb/image_raw", 1);
-    message_filters::Subscriber<sensor_msgs::Image> depth_sub(nh, "camera/depth_registered/image_raw", 1);
+    
+    
+    message_filters::Subscriber<sensor_msgs::Image> rgb_sub(nh, rgb_topic, 1);
+    message_filters::Subscriber<sensor_msgs::Image> depth_sub(nh, depth_topic, 1);
     typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::Image, sensor_msgs::Image> sync_pol;
     message_filters::Synchronizer<sync_pol> sync(sync_pol(10), rgb_sub,depth_sub);
     sync.registerCallback(boost::bind(&ImageGrabber::GrabRGBD,&igb,_1,_2));
@@ -109,7 +127,28 @@ void ImageGrabber::GrabRGBD(const sensor_msgs::ImageConstPtr& msgRGB,const senso
         return;
     }
 
-    mpSLAM->TrackRGBD(cv_ptrRGB->image,cv_ptrD->image,cv_ptrRGB->header.stamp.toSec());
+    cv::Mat curr_T =  mpSLAM->TrackRGBD(cv_ptrRGB->image,cv_ptrD->image,cv_ptrRGB->header.stamp.toSec());
+
+    Eigen::Matrix4f Tr, Tr_inverse;
+    for(size_t i=0; i<4; ++i)
+      for(size_t j=0; j<4; ++j)
+	Tr(i,j) = curr_T.at<float>(i,j);
+
+    Tr_inverse = Tr.inverse();
+
+    Eigen::Matrix3f rot = Tr_inverse.block<3,3>(0,0);
+    
+    static tf::TransformBroadcaster tf_broadcaster;
+    tf::Transform tf_content;
+    tf::Vector3 tf_translation(Tr_inverse(0,3), Tr_inverse(1,3), Tr_inverse(2,3));
+    Eigen::Quaternionf qi(rot);
+    tf::Quaternion tf_quaternion(qi.x(), qi.y(), qi.z(), qi.w());
+    tf_content.setOrigin(tf_translation);
+    tf_content.setRotation(tf_quaternion);
+
+    tf::StampedTransform tf_msg(tf_content, cv_ptrRGB->header.stamp, tf_frame, tf_child_frame);
+    tf_broadcaster.sendTransform(tf_msg);
+
 }
 
 
