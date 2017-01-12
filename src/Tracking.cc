@@ -155,7 +155,7 @@ namespace ORB_SLAM2
 
   void Tracking::SetLoopClosing(LoopClosing *pLoopClosing)
   {
-    mpLoopClosing=pLoopClosing;
+    //    mpLoopClosing=pLoopClosing;
   }
 
   void Tracking::SetViewer(Viewer *pViewer)
@@ -309,7 +309,9 @@ namespace ORB_SLAM2
 
                 if(mVelocity.empty() || mCurrentFrame.mnId<mnLastRelocFrameId+2)
 		  {
+		    //      cout << "1" << endl;
                     bOK = TrackReferenceKeyFrame();
+		    //		            cout << "2" << endl;
 		  }
                 else
 		  {
@@ -544,7 +546,6 @@ namespace ORB_SLAM2
         cout << "New map created with " << mpMap->MapPointsInMap() << " points" << endl;
 
         mpLocalMapper->InsertKeyFrame(pKFini);
-
         mLastFrame = Frame(mCurrentFrame);
         mnLastKeyFrameId=mCurrentFrame.mnId;
         mpLastKeyFrame = pKFini;
@@ -553,9 +554,9 @@ namespace ORB_SLAM2
         mvpLocalMapPoints=mpMap->GetAllMapPoints();
         mpReferenceKF = pKFini;
         mCurrentFrame.mpReferenceKF = pKFini;
-
+	
         mpMap->SetReferenceMapPoints(mvpLocalMapPoints);
-
+	
         mpMap->mvpKeyFrameOrigins.push_back(pKFini);
 
         mpMapDrawer->SetCurrentCameraPose(mCurrentFrame.mTcw);
@@ -1521,11 +1522,13 @@ namespace ORB_SLAM2
     mpLocalMapper->RequestReset();
     cout << " done" << endl;
 
+    /*    if(mpLoopClosing){
     // Reset Loop Closing
     cout << "Reseting Loop Closing...";
     mpLoopClosing->RequestReset();
     cout << " done" << endl;
-
+    }*/
+    
     // Clear BoW Database
     cout << "Reseting Database...";
     mpKeyFrameDB->clear();

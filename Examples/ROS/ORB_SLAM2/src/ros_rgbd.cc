@@ -81,8 +81,7 @@ int main(int argc, char **argv)
 
     ORB_SLAM2::System SLAM(vocabulary, settings ,ORB_SLAM2::System::RGBD,use_gui);
     ImageGrabber igb(&SLAM);
-    
-    
+   
     message_filters::Subscriber<sensor_msgs::Image> rgb_sub(nh, rgb_topic, 1);
     message_filters::Subscriber<sensor_msgs::Image> depth_sub(nh, depth_topic, 1);
     typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::Image, sensor_msgs::Image> sync_pol;

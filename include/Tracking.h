@@ -29,7 +29,7 @@
 #include"FrameDrawer.h"
 #include"Map.h"
 #include"LocalMapping.h"
-#include"LoopClosing.h"
+//#include"LoopClosing.h"
 #include"Frame.h"
 #include "ORBVocabulary.h"
 #include"KeyFrameDatabase.h"
@@ -152,7 +152,7 @@ protected:
 
     //Other Thread Pointers
     LocalMapping* mpLocalMapper;
-    LoopClosing* mpLoopClosing;
+    //LoopClosing* mpLoopClosing;
 
     //ORB
     ORBextractor* mpORBextractorLeft, *mpORBextractorRight;
